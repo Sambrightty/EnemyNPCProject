@@ -9,6 +9,7 @@ public class EnemyFSM : MonoBehaviour
     public Transform player;
     public FieldOfView fieldOfView;
     public HealthSystem healthSystem;
+    public PlayerBehaviorTracker behaviorTracker;
 
     private EnemyStateManager stateManager;
     private NavMeshAgent agent;
@@ -18,10 +19,25 @@ public class EnemyFSM : MonoBehaviour
     public float attackDistance = 2f;
     public float lowHealthThreshold = 30f;
 
+    private EnemyGrudgeMemory grudgeMemory;
+
     private void Start()
     {
         stateManager = GetComponent<EnemyStateManager>();
         agent = GetComponent<NavMeshAgent>();
+        grudgeMemory = GetComponent<EnemyGrudgeMemory>();
+
+        if (grudgeMemory != null)
+        {
+            int grudge = grudgeMemory.GetGrudgeLevel();
+
+            // Adapt aggression based on grudge level
+            attackDistance += grudge * 0.5f;
+            chaseDistance += grudge * 1f;
+            agent.speed += grudge * 0.2f;
+
+            Debug.Log("Grudge-enhanced aggression: attackDistance = " + attackDistance + ", chaseDistance = " + chaseDistance);
+        }
     }
 
     private void Update()
@@ -29,13 +45,11 @@ public class EnemyFSM : MonoBehaviour
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool canSeePlayer = fieldOfView.CanSeePlayer;
 
-        // TEMPORARY TEST
-        if (Input.GetKeyDown(KeyCode.H)) // Press 'H' to hurt
+        if (Input.GetKeyDown(KeyCode.H))
         {
             healthSystem.TakeDamage(20f);
         }
 
-        // Decide state
         if (healthSystem.currentHealth < lowHealthThreshold)
         {
             stateManager.SetState(EnemyStateManager.EnemyState.Retreat);
@@ -68,9 +82,35 @@ public class EnemyFSM : MonoBehaviour
 
     private void Attack()
     {
-         agent.SetDestination(transform.position); 
-        // Add your attack logic (e.g., animation, damage, etc.)
-        Debug.Log("Enemy attacks the player!");
+        agent.SetDestination(transform.position); // Stop moving
+
+        if (behaviorTracker != null)
+        {
+            string behavior = behaviorTracker.GetBehaviorType();
+
+            switch (behavior)
+            {
+                case "Aggressive":
+                    Debug.Log("🟢 Enemy dodges! Player is aggressive.");
+                    // TODO: Trigger dodge animation or repositioning
+                    break;
+
+                case "Defensive":
+                    Debug.Log("🔴 Enemy charges! Player is defensive.");
+                    // TODO: Trigger charge animation or increased speed
+                    break;
+
+                default:
+                    Debug.Log("🟡 Enemy attacks normally. Player is balanced.");
+                    break;
+            }
+
+            behaviorTracker.ResetBehavior();
+        }
+        else
+        {
+            Debug.LogWarning("⚠️ PlayerBehaviorTracker not assigned in EnemyFSM.");
+        }
     }
 
     private void Retreat()
@@ -87,7 +127,7 @@ public class EnemyFSM : MonoBehaviour
 
     private void Search()
     {
-        // Optional: Add search pattern or last known position behavior
         Debug.Log("Searching for player...");
+        // Optional: Implement search logic
     }
 }

@@ -47,15 +47,15 @@ public class PlayerBehaviorTracker : MonoBehaviour
   }
     
     // To show behavior type on screen temporarily:
-    // void OnGUI()
-  // {
-  //     GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
-  //     labelStyle.fontSize = 24;                      // 👈 Make the font larger
-  //     labelStyle.normal.textColor = Color.white;     // 👈 Set color (optional)
-  //     labelStyle.fontStyle = FontStyle.Bold;         // 👈 Optional: Bold text
+    void OnGUI()
+  {
+      GUIStyle labelStyle = new GUIStyle(GUI.skin.label);
+      labelStyle.fontSize = 24;                      // 👈 Make the font larger
+      labelStyle.normal.textColor = Color.white;     // 👈 Set color (optional)
+      labelStyle.fontStyle = FontStyle.Bold;         // 👈 Optional: Bold text
 
-  //     GUI.Label(new Rect(10, 10, 300, 30), "Behavior: " + GetBehaviorType(), labelStyle);
-  // }
+      GUI.Label(new Rect(10, 10, 300, 30), "Behavior: " + GetBehaviorType(), labelStyle);
+  }
 
 
 }
