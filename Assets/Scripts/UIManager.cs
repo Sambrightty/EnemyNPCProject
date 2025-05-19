@@ -1,5 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TMPro;
+
 
 public class UIManager : MonoBehaviour
 {
@@ -8,6 +10,8 @@ public class UIManager : MonoBehaviour
     public GameObject pausePanel;
     public GameObject gameButtonsPanel;
     public GameObject quitConfirmationPanel;
+    public GameObject endGamePanel;
+    public TextMeshProUGUI resultText; // UnityEngine.UI
 
     private bool isPaused = false;
     private bool inInstructionOverlay = false;
@@ -108,4 +112,17 @@ public class UIManager : MonoBehaviour
         quitConfirmationPanel.SetActive(false);
         gameButtonsPanel.SetActive(false);
     }
+
+    public void EndGame(string winner)
+    {
+        Time.timeScale = 0f;
+
+        endGamePanel.SetActive(true);
+        gameButtonsPanel.SetActive(false);
+        pausePanel.SetActive(false);
+        quitConfirmationPanel.SetActive(false);
+
+        resultText.text = winner + " Wins!";
+    }
+
 }

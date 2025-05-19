@@ -19,7 +19,9 @@ public class HealthSystem : MonoBehaviour
     private bool hasPlayedLowHealthCue = false;
     public float fadeSpeed = 1f;
     private Color transparentRed = new Color(1, 0, 0, 0f);   // Fully transparent
-    private Color visibleRed = new Color(1, 0, 0, 0.3f); 
+    private Color visibleRed = new Color(1, 0, 0, 0.3f);
+
+    private bool hasPlayedHurtVoice = false;
 
     void Start()
     {
@@ -69,8 +71,32 @@ public class HealthSystem : MonoBehaviour
         if (currentHealth <= 0)
         {
             Debug.Log((isPlayer ? "Player" : "Enemy") + " is Dead!");
-            // TODO: Add death animation or restart
+
+            UIManager ui = FindObjectOfType<UIManager>();
+            if (ui != null)
+            {
+                if (isPlayer)
+                    ui.EndGame("Enemy");
+                else
+                    ui.EndGame("Player");
+            }
+
+            DisableMovement(); // 👇 new method to stop movement
         }
+
+
+        if (!isPlayer && currentHealth <= maxHealth * 0.3f && !hasPlayedHurtVoice)
+        {
+            VoiceManager vm = GetComponent<VoiceManager>();
+            if (vm != null)
+            {
+                vm.PlayHurtVoice();
+                hasPlayedHurtVoice = true;
+            }
+        }
+
+
+
     }
 
     public void Heal(float amount)
@@ -114,4 +140,19 @@ public class HealthSystem : MonoBehaviour
             }
         }
     }
+    
+    private void DisableMovement()
+    {
+        if (isPlayer)
+        {
+            PlayerController controller = GetComponent<PlayerController>();
+            if (controller != null) controller.enabled = false;
+        }
+        else
+        {
+            EnemyFSM fsm = GetComponent<EnemyFSM>();
+            if (fsm != null) fsm.enabled = false;
+        }
+    }
+
 }

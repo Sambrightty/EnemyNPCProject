@@ -78,6 +78,13 @@ public class EnemyFSM : MonoBehaviour
         {
             agent.SetDestination(player.position);
         }
+
+        VoiceManager vm = GetComponent<VoiceManager>();
+        if (vm != null)
+        {
+            vm.PlayAlertedVoice();
+        }
+
     }
 
     private void Attack()
@@ -123,6 +130,13 @@ public class EnemyFSM : MonoBehaviour
         {
             agent.SetDestination(hit.position);
         }
+
+        VoiceManager vm = GetComponent<VoiceManager>();
+        if (vm != null)
+        {
+            vm.PlayRetreatVoice();
+        }
+
     }
 
     private void Search()
