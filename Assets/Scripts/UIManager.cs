@@ -17,6 +17,10 @@ public class UIManager : MonoBehaviour
     private bool inInstructionOverlay = false;
     private bool gameStarted = false;
 
+    public PlayerBehaviorTracker playerBehaviorTracker;
+    public GameObject enemyGameObject;  // Enemy GameObject reference
+
+
     private void Start()
     {
         Time.timeScale = 0f; // Start paused
@@ -123,6 +127,29 @@ public class UIManager : MonoBehaviour
         quitConfirmationPanel.SetActive(false);
 
         resultText.text = winner + " Wins!";
+
+        // NEW: Only evolve if player lost (enemy won)
+        if (winner == "Enemy")
+        {
+            if (playerBehaviorTracker != null && enemyGameObject != null)
+            {
+                string playerBehavior = playerBehaviorTracker.GetBehaviorType();
+
+                GeneticEnemyAI enemyAI = enemyGameObject.GetComponent<GeneticEnemyAI>();
+                if (enemyAI != null)
+                {
+                    enemyAI.EvolveGene(playerBehavior);
+                    Debug.Log("Enemy AI evolved based on player behavior: " + playerBehavior);
+                }
+            }
+        }
+
+        // Reset player behavior counts for next game
+        if (playerBehaviorTracker != null)
+        {
+            playerBehaviorTracker.ResetBehavior();
+        }
     }
+
 
 }

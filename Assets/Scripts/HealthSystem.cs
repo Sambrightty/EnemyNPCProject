@@ -1,14 +1,15 @@
-
 using UnityEngine;
 using UnityEngine.UI;
 
 public class HealthSystem : MonoBehaviour
 {
+    [Header("Health Settings")]
     public float maxHealth = 100f;
     public float currentHealth;
     public Slider healthBar;
-
     public bool isPlayer = false;
+
+    public bool IsBlocking { get; set; }
 
     public EnemyGrudgeMemory grudgeMemory;
 
@@ -18,7 +19,7 @@ public class HealthSystem : MonoBehaviour
     public float lowHealthThreshold = 30f;
     private bool hasPlayedLowHealthCue = false;
     public float fadeSpeed = 1f;
-    private Color transparentRed = new Color(1, 0, 0, 0f);   // Fully transparent
+    private Color transparentRed = new Color(1, 0, 0, 0f);
     private Color visibleRed = new Color(1, 0, 0, 0.3f);
 
     private bool hasPlayedHurtVoice = false;
@@ -37,31 +38,41 @@ public class HealthSystem : MonoBehaviour
 
         if (lowHealthOverlay != null)
         {
-            lowHealthOverlay.enabled = false; // hide at start
+            lowHealthOverlay.enabled = false;
         }
     }
 
     void Update()
     {
-        if (lowHealthOverlay != null)
+        HandleLowHealthOverlay();
+    }
+
+    private void HandleLowHealthOverlay()
+    {
+        if (lowHealthOverlay == null) return;
+
+        if (currentHealth <= lowHealthThreshold)
         {
-            if (currentHealth <= lowHealthThreshold)
-            {
-                // Fade in
-                lowHealthOverlay.color = Color.Lerp(lowHealthOverlay.color, visibleRed, Time.deltaTime * fadeSpeed);
-            }
-            else
-            {
-                // Fade out
-                lowHealthOverlay.color = Color.Lerp(lowHealthOverlay.color, transparentRed, Time.deltaTime * fadeSpeed);
-            }
+            lowHealthOverlay.color = Color.Lerp(lowHealthOverlay.color, visibleRed, Time.deltaTime * fadeSpeed);
+        }
+        else
+        {
+            lowHealthOverlay.color = Color.Lerp(lowHealthOverlay.color, transparentRed, Time.deltaTime * fadeSpeed);
         }
     }
 
     public void TakeDamage(float amount)
     {
+        if (IsBlocking)
+        {
+            Debug.Log((isPlayer ? "Player" : "Enemy") + " blocked the attack. No damage taken.");
+            return;
+        }
+
         currentHealth -= amount;
         currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+
+        Debug.Log((isPlayer ? "Player" : "Enemy") + " took damage: " + amount + ", health now: " + currentHealth);
 
         if (healthBar != null)
             healthBar.value = currentHealth;
@@ -72,7 +83,7 @@ public class HealthSystem : MonoBehaviour
         {
             Debug.Log((isPlayer ? "Player" : "Enemy") + " is Dead!");
 
-            UIManager ui = FindObjectOfType<UIManager>();
+            UIManager ui = FindFirstObjectByType<UIManager>();
             if (ui != null)
             {
                 if (isPlayer)
@@ -81,9 +92,8 @@ public class HealthSystem : MonoBehaviour
                     ui.EndGame("Player");
             }
 
-            DisableMovement(); // 👇 new method to stop movement
+            DisableMovement();
         }
-
 
         if (!isPlayer && currentHealth <= maxHealth * 0.3f && !hasPlayedHurtVoice)
         {
@@ -94,9 +104,6 @@ public class HealthSystem : MonoBehaviour
                 hasPlayedHurtVoice = true;
             }
         }
-
-
-
     }
 
     public void Heal(float amount)
@@ -107,7 +114,7 @@ public class HealthSystem : MonoBehaviour
         if (healthBar != null)
             healthBar.value = currentHealth;
 
-        HandleLowHealthEffects(); // Reset cue if healed
+        HandleLowHealthEffects();
     }
 
     public bool IsDead()
@@ -115,17 +122,13 @@ public class HealthSystem : MonoBehaviour
         return currentHealth <= 0;
     }
 
-    void HandleLowHealthEffects()
+    private void HandleLowHealthEffects()
     {
         bool isLow = currentHealth <= lowHealthThreshold;
 
-        // Flash red screen
         if (lowHealthOverlay != null)
-        {
             lowHealthOverlay.enabled = isLow;
-        }
 
-        // Play warning sound once
         if (lowHealthAudio != null)
         {
             if (isLow && !hasPlayedLowHealthCue)
@@ -136,11 +139,11 @@ public class HealthSystem : MonoBehaviour
             else if (!isLow)
             {
                 hasPlayedLowHealthCue = false;
-                lowHealthAudio.Stop(); // Optional: stop if health recovers
+                lowHealthAudio.Stop();
             }
         }
     }
-    
+
     private void DisableMovement()
     {
         if (isPlayer)
@@ -154,5 +157,4 @@ public class HealthSystem : MonoBehaviour
             if (fsm != null) fsm.enabled = false;
         }
     }
-
 }
