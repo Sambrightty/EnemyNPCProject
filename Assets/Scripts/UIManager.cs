@@ -2,31 +2,40 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 
-
+/// <summary>
+/// Manages all game UI panels and user interactions such as pause, instructions,
+/// quitting, and endgame results. Also coordinates enemy evolution via behavior tracking.
+/// </summary>
 public class UIManager : MonoBehaviour
 {
+    [Header("UI Panels")]
     public GameObject mainMenuPanel;
     public GameObject instructionsPanel;
     public GameObject pausePanel;
     public GameObject gameButtonsPanel;
     public GameObject quitConfirmationPanel;
     public GameObject endGamePanel;
-    public TextMeshProUGUI resultText; // UnityEngine.UI
+
+    [Header("Result Display")]
+    public TextMeshProUGUI resultText;
+
+    [Header("References")]
+    public PlayerBehaviorTracker playerBehaviorTracker;
+    public GameObject enemyGameObject;
 
     private bool isPaused = false;
     private bool inInstructionOverlay = false;
     private bool gameStarted = false;
 
-    public PlayerBehaviorTracker playerBehaviorTracker;
-    public GameObject enemyGameObject;  // Enemy GameObject reference
-
-
     private void Start()
     {
-        Time.timeScale = 0f; // Start paused
+        Time.timeScale = 0f; // Pause the game at the start
         ShowMainMenu();
     }
 
+    /// <summary>
+    /// Starts the actual gameplay.
+    /// </summary>
     public void StartGame()
     {
         gameStarted = true;
@@ -36,10 +45,12 @@ public class UIManager : MonoBehaviour
         instructionsPanel.SetActive(false);
         quitConfirmationPanel.SetActive(false);
         pausePanel.SetActive(false);
-
         gameButtonsPanel.SetActive(true);
     }
 
+    /// <summary>
+    /// Toggles the pause panel and pauses/resumes game time.
+    /// </summary>
     public void TogglePause()
     {
         if (inInstructionOverlay || !gameStarted) return;
@@ -49,6 +60,9 @@ public class UIManager : MonoBehaviour
         Time.timeScale = isPaused ? 0f : 1f;
     }
 
+    /// <summary>
+    /// Displays the instruction panel and pauses the game.
+    /// </summary>
     public void ShowInstructions()
     {
         inInstructionOverlay = true;
@@ -60,6 +74,9 @@ public class UIManager : MonoBehaviour
         quitConfirmationPanel.SetActive(false);
     }
 
+    /// <summary>
+    /// Returns to the main menu or resumes the game based on state.
+    /// </summary>
     public void BackToMenu()
     {
         instructionsPanel.SetActive(false);
@@ -76,6 +93,9 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Restarts the current scene/game from scratch.
+    /// </summary>
     public void RestartGame()
     {
         if (inInstructionOverlay) return;
@@ -84,6 +104,9 @@ public class UIManager : MonoBehaviour
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    /// <summary>
+    /// Displays the quit confirmation panel.
+    /// </summary>
     public void QuitGame()
     {
         if (inInstructionOverlay || !gameStarted) return;
@@ -95,12 +118,18 @@ public class UIManager : MonoBehaviour
         Time.timeScale = 0f;
     }
 
+    /// <summary>
+    /// Confirms quitting to the main menu by restarting the scene.
+    /// </summary>
     public void ConfirmQuitToMainMenu()
     {
-        Time.timeScale = 1f; // Avoid freezing on reload
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name); // Reset all
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
 
+    /// <summary>
+    /// Cancels the quit process and resumes gameplay.
+    /// </summary>
     public void CancelQuit()
     {
         quitConfirmationPanel.SetActive(false);
@@ -108,6 +137,9 @@ public class UIManager : MonoBehaviour
         Time.timeScale = 1f;
     }
 
+    /// <summary>
+    /// Displays the main menu and hides all other panels.
+    /// </summary>
     private void ShowMainMenu()
     {
         mainMenuPanel.SetActive(true);
@@ -117,6 +149,10 @@ public class UIManager : MonoBehaviour
         gameButtonsPanel.SetActive(false);
     }
 
+    /// <summary>
+    /// Ends the game, shows result, and triggers AI evolution if the enemy wins.
+    /// </summary>
+    /// <param name="winner">The winning party ("Player" or "Enemy").</param>
     public void EndGame(string winner)
     {
         Time.timeScale = 0f;
@@ -126,30 +162,37 @@ public class UIManager : MonoBehaviour
         pausePanel.SetActive(false);
         quitConfirmationPanel.SetActive(false);
 
-        resultText.text = winner + " Wins!";
+        resultText.text = $"{winner} Wins!";
 
-        // NEW: Only evolve if player lost (enemy won)
         if (winner == "Enemy")
         {
-            if (playerBehaviorTracker != null && enemyGameObject != null)
-            {
-                string playerBehavior = playerBehaviorTracker.GetBehaviorType();
-
-                GeneticEnemyAI enemyAI = enemyGameObject.GetComponent<GeneticEnemyAI>();
-                if (enemyAI != null)
-                {
-                    enemyAI.EvolveGene(playerBehavior);
-                    Debug.Log("Enemy AI evolved based on player behavior: " + playerBehavior);
-                }
-            }
+            TryEvolveEnemyAI();
         }
 
-        // Reset player behavior counts for next game
         if (playerBehaviorTracker != null)
         {
             playerBehaviorTracker.ResetBehavior();
         }
     }
 
+    /// <summary>
+    /// Attempts to evolve enemy AI based on the tracked player behavior.
+    /// </summary>
+    private void TryEvolveEnemyAI()
+    {
+        if (playerBehaviorTracker == null || enemyGameObject == null) return;
 
+        string playerBehavior = playerBehaviorTracker.GetBehaviorType();
+        GeneticEnemyAI enemyAI = enemyGameObject.GetComponent<GeneticEnemyAI>();
+
+        if (enemyAI != null)
+        {
+            enemyAI.EvolveGene(playerBehavior);
+            Debug.Log($"🧠 Enemy AI evolved based on player behavior: {playerBehavior}");
+        }
+        else
+        {
+            Debug.LogWarning("Enemy GameObject does not have a GeneticEnemyAI component.");
+        }
+    }
 }

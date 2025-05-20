@@ -1,70 +1,88 @@
 # 🎮 Adaptive Enemy NPC System (Unity - Final Year Project)
 
-This Unity prototype demonstrates an **intelligent, adaptive Enemy NPC** capable of perceiving, reacting to, and learning from player behavior. Designed for academic purposes, the system includes realistic perception mechanics, a finite state machine (FSM), and foundational groundwork for adaptive AI behavior and memory.
+This Unity project showcases an intelligent, adaptive Enemy NPC system capable of perceiving, reacting to, and learning from player behavior in a 3D arena. Built for academic research, it integrates perception mechanics, a finite state machine (FSM), and a foundation for adaptive AI and memory systems.
 
 ---
 
-## 📌 Features Implemented
+## ✅ Completed Features
 
-### ✅ Phase 1: Core Setup & Scene Design
-- Created a structured Unity 3D project with organized folders (`Scripts`, `Prefabs`, `UI`, `Audio`, etc.).
-- Built an enclosed test arena (corridor/arena) with obstacles and lighting.
-- Added placeholder Player and Enemy objects for prototyping.
-- Configured Unity NavMesh:
-  - Baked surfaces.
-  - Added `NavMeshAgent` to the enemy for navigation.
+### 🔧 Phase 1: Core Setup
 
-### ✅ Phase 2: Enemy Perception System
-- Implemented **Field of View (FoV)** using raycasting and angle detection.
-- Integrated **obstacle blocking** using `Physics.Raycast`.
-- Created **awareness states**: `Unaware`, `Suspicious`, `Alerted`, `Engaged`.
-- Visual feedback for awareness using debug colors and logs.
-- Developed **auditory detection** via `SphereCollider` trigger for detecting loud actions (e.g., sprinting).
+- Organized Unity project structure: Scripts, Prefabs, UI, Audio, etc.
+- Built enclosed 3D test arena with obstacles and lighting.
+- Integrated Unity NavMesh:
+  - Baked navigation mesh.
+  - Attached `NavMeshAgent` to enemy.
 
-### ✅ Phase 3: Enemy Finite State Machine (FSM)
-- Defined states: `Patrol`, `Chase`, `Attack`, `Search`, `Retreat`.
-- Created `EnemyFSM` script using `enum`-based logic for transitions.
-- Added patrol system via waypoints.
-- Implemented chase logic using NavMeshAgent.
-- Built a simple attack mechanic with console damage debug messages.
-- Integrated basic **retreat behavior** based on low health threshold.
+### 👁️ Phase 2: Enemy Perception
 
-### ✅ Health Management System
-- Reusable `HealthSystem` script for both player and enemy.
-- Tracks health, damage, and death logic.
-- Prints debug logs on health changes (to be connected to UI).
+- Field of View (FoV) detection using raycasting and angle logic.
+- Line-of-sight blocking via `Physics.Raycast`.
+- Awareness states: **Unaware**, **Suspicious**, **Alerted**, **Engaged**.
+- Auditory detection using trigger collider (e.g., for sprint sounds).
+- Debug color/log feedback based on awareness level.
 
----
+### 🤖 Phase 3: Finite State Machine (FSM)
 
-## 🛠 Technologies Used
-- **Unity 2021+**
-- **C#**
-- **NavMesh System**
-- **Raycasting**
-- **Trigger Colliders**
-- **FSM Architecture**
+- Enemy FSM with states: **Patrol**, **Chase**, **Attack**, **Search**, **Retreat**.
+- Waypoint-based patrol.
+- Navigation and chasing via NavMeshAgent.
+- Basic melee attack with damage debug logging.
+- Retreat when health is low.
 
----
+### ❤️ Health System
 
-## 🚧 Work In Progress
+- `HealthSystem.cs`: modular, reusable for player and enemy.
+- Tracks health, applies damage, handles death logic.
 
-| System                     | Status      | Notes |
-|----------------------------|-------------|-------|
-| 🎮 Player Combat & Controls | ⚙️ In Progress | Movement, animations, combat input |
-| 🧠 Adaptive Behavior        | ⏳ Planned   | Aggression/stealth profiling |
-| 🧠 Grudge Memory System     | ⏳ Planned   | Track past tactics and influence behavior |
-| ❤️ Health Bar UI            | ⏳ Planned   | UI integration and health feedback |
-| 🔊 Voice Feedback           | ⏳ Planned   | Audio lines tied to states/actions |
-| 🧾 Game Menu & End Screen   | ⏳ Planned   | Start/Restart/Result/Quit options |
+### 🧍 Player Combat & Controls
 
+- Third-person movement system.
+- Attack input with animations.
+- Combat interaction integrated with enemy hitbox and health.
+
+### 🖥️ UI & Game Flow
+
+- Health bars for both player and enemy.
+- UI feedback on damage/death.
+- Pause menu, instructions overlay, restart and quit options.
+- End screen based on win/loss condition.
 
 ---
 
-## 🎯 Upcoming Milestones
-- [ ] Add player movement and attack input.
-- [ ] Tie player attacks to enemy health system.
-- [ ] Display health bars for both player and enemy.
-- [ ] Build adaptive AI behavior and memory profiling.
-- [ ] Implement audio cues and voice reactions.
-- [ ] Complete menu system with game flow logic.
+## ⚠️ Remaining Task
 
+| Component                   | Status         | Details                                                                    |
+| --------------------------- | -------------- | -------------------------------------------------------------------------- |
+| 🧍 Player & Enemy 3D Models | ⚙️ In Progress | Import distinctive animated models for player and enemy.                   |
+| 🌆 Arena Visuals            | ⚙️ In Progress | Replace placeholders with textured props, environment packs, and lighting. |
+| 🕺 Animation Assignment     | ⚙️ In Progress | Attach walk, idle, attack, hit, and die animations using Animator.         |
+
+> 💡 _All gameplay logic and systems are complete. Only visual polish (3D/Animation) remains._
+
+---
+
+## 🔧 Tech Stack
+
+- Unity 2021+
+- C# Scripts
+- NavMesh System
+- FSM Architecture
+- Raycasting & Trigger Colliders
+- Unity UI Toolkit
+
+---
+
+## 🎯 Final Project Goals
+
+- ✅ Core gameplay & combat loop
+- ✅ AI behavior switching via FSM
+- ✅ Player combat, movement, and animations
+- ✅ UI with real-time health & state feedback
+- ✅ End-game logic with restart and quit flow
+- 🔜 Replace placeholders with finalized 3D models and animation assets
+
+---
+
+📌 **Project Status:**  
+🟢 _95% complete — core mechanics and logic are done. Awaiting final 3D model & animation integration._

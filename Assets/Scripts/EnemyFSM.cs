@@ -2,172 +2,214 @@ using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
 
-
+/// <summary>
+/// EnemyFSM handles the finite state machine logic for an enemy NPC,
+/// transitioning between Patrol, Chase, Attack, Retreat, and Search states
+/// based on player visibility, distance, and health conditions. Includes
+/// adaptive behavior via GeneticEnemyAI and player tracking.
+/// </summary>
 [RequireComponent(typeof(NavMeshAgent))]
 [RequireComponent(typeof(EnemyStateManager))]
 public class EnemyFSM : MonoBehaviour
 {
-    public Transform player;
-    public FieldOfView fieldOfView;
-    public HealthSystem healthSystem;
-    public PlayerBehaviorTracker behaviorTracker;
+    [Header("References")]
+    public Transform player;                          // Target player object
+    public FieldOfView fieldOfView;                   // Handles player visibility checks
+    public HealthSystem healthSystem;                 // Enemy health and blocking logic
+    public PlayerBehaviorTracker behaviorTracker;     // Tracks player behavior for AI evolution
 
-    private EnemyStateManager stateManager;
-    private NavMeshAgent agent;
-    private GeneticEnemyAI enemyAI;
-    private EnemyGrudgeMemory grudgeMemory;
+    private NavMeshAgent agent;                       // Unity navigation agent
+    private EnemyStateManager stateManager;           // Manages enemy's current FSM state
+    private GeneticEnemyAI enemyAI;                   // Provides adaptive decision-making logic
+    private EnemyGrudgeMemory grudgeMemory;           // Modifies stats based on grudge level
+    private VoiceManager voiceManager;                // Handles enemy voice playback
 
     [Header("State Thresholds")]
-    public float chaseDistance = 10f;
-    public float attackDistance = 2f;
-    public float lowHealthThreshold = 30f;
+    public float chaseDistance = 10f;                 // Distance within which enemy will chase
+    public float attackDistance = 2f;                 // Distance within which enemy will attack
+    public float lowHealthThreshold = 30f;            // Below this, enemy will retreat
 
     [Header("Search Settings")]
-    public float searchDuration = 5f;
-    private float searchTimer = 0f;
+    public float searchDuration = 5f;                 // Time spent searching after losing player
+
+    [Header("Retreat Settings")]
+    public float healingRate = 5f;                    // Healing rate while retreating
+    public float safeDistance = 8f;                   // Safe distance from player to heal
+
+    private float attackCooldown = 1.5f;              // Delay between attacks
+    private float attackTimer;
+    private float searchTimer;
+
     private bool isSearching = false;
-
-    private float attackCooldown = 1.5f;
-    private float attackTimer = 0f;
-
     private bool isRetreating = false;
     private bool isHealing = false;
-    private float healingRate = 5f; // Health per second
-    private float safeDistance = 8f; // Distance to consider safe
     private Vector3 retreatTarget;
 
+    /// <summary>
+    /// Initializes components and adjusts behavior based on grudge level.
+    /// </summary>
     private void Start()
     {
-        stateManager = GetComponent<EnemyStateManager>();
         agent = GetComponent<NavMeshAgent>();
+        stateManager = GetComponent<EnemyStateManager>();
         grudgeMemory = GetComponent<EnemyGrudgeMemory>();
         enemyAI = GetComponent<GeneticEnemyAI>();
+        voiceManager = GetComponent<VoiceManager>();
 
-        if (grudgeMemory != null)
-        {
-            int grudge = grudgeMemory.GetGrudgeLevel();
-            attackDistance += grudge * 0.5f;
-            chaseDistance += grudge * 1f;
-            agent.speed += grudge * 0.2f;
-
-            Debug.Log("Grudge-enhanced aggression: attackDistance = " + attackDistance + ", chaseDistance = " + chaseDistance);
-        }
+        ApplyGrudgeBehavior(); // Boost aggression if enemy holds a grudge
     }
 
+    /// <summary>
+    /// FSM logic run every frame to determine enemy behavior.
+    /// </summary>
     private void Update()
     {
         float distanceToPlayer = Vector3.Distance(transform.position, player.position);
         bool canSeePlayer = fieldOfView.CanSeePlayer;
 
+        // Prioritize retreating if health is low
         if (healthSystem.currentHealth < lowHealthThreshold)
         {
             stateManager.SetState(EnemyStateManager.EnemyState.Retreat);
             Retreat();
         }
+        // Attack if within striking distance and player is visible
         else if (canSeePlayer && distanceToPlayer <= attackDistance)
         {
-            isSearching = false;
+            EndSearch();
             stateManager.SetState(EnemyStateManager.EnemyState.Attack);
             Attack();
         }
+        // Chase if player is in view but far from attack range
         else if (canSeePlayer && distanceToPlayer <= chaseDistance)
         {
-            isSearching = false;
+            EndSearch();
             stateManager.SetState(EnemyStateManager.EnemyState.Chase);
             Chase();
         }
-        else if (!canSeePlayer && (stateManager.currentState == EnemyStateManager.EnemyState.Chase || stateManager.currentState == EnemyStateManager.EnemyState.Attack))
+        // Player was visible but now lost — begin searching
+        else if (!canSeePlayer && IsInCombatState())
         {
             StartSearch();
         }
+        // Searching logic countdown
         else if (isSearching)
         {
             searchTimer -= Time.deltaTime;
             if (searchTimer <= 0f)
             {
-                isSearching = false;
+                EndSearch();
                 stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
             }
         }
     }
 
+    /// <summary>
+    /// Adjusts enemy aggression based on grudge level memory.
+    /// </summary>
+    private void ApplyGrudgeBehavior()
+    {
+        if (grudgeMemory == null) return;
+
+        int grudge = grudgeMemory.GetGrudgeLevel();
+        attackDistance += grudge * 0.5f;
+        chaseDistance += grudge * 1f;
+        agent.speed += grudge * 0.2f;
+
+        Debug.Log($"[Grudge AI] Adjusted stats — Attack: {attackDistance}, Chase: {chaseDistance}");
+    }
+
+    /// <summary>
+    /// Moves toward the player while playing a voice alert.
+    /// </summary>
     private void Chase()
     {
-        if (player != null)
-        {
-            agent.SetDestination(player.position);
-        }
+        if (player == null) return;
 
-        VoiceManager vm = GetComponent<VoiceManager>();
-        if (vm != null)
-        {
-            vm.PlayAlertedVoice();
-        }
+        agent.SetDestination(player.position);
+        voiceManager?.PlayAlertedVoice();
     }
 
+    /// <summary>
+    /// Executes an attack cycle with cooldown and AI-driven decision-making.
+    /// </summary>
     private void Attack()
     {
-        agent.SetDestination(transform.position); // Stop moving
+        agent.SetDestination(transform.position); // Stop movement
         attackTimer += Time.deltaTime;
 
-        if (attackTimer >= attackCooldown)
+        if (attackTimer < attackCooldown) return;
+
+        attackTimer = 0f;
+        string action = enemyAI.DecideNextAction();
+        Debug.Log($"[AI Decision] Action: {action}");
+
+        switch (action)
         {
-            attackTimer = 0f;
+            case "Attack":
+                TryAttackPlayer();
+                break;
+            case "Block":
+                StartBlock();
+                break;
+            case "Dodge":
+                Debug.Log("🌀 Enemy dodges!");
+                break;
+            default:
+                Debug.Log("😐 Enemy does nothing.");
+                break;
+        }
 
-            string action = enemyAI.DecideNextAction();
-            Debug.Log("🔁 [AI Decision] Action: " + action);
+        TrackAndEvolveBehavior(); // Apply learning from player behavior
+    }
 
-            switch (action)
-            {
-                case "Attack":
-                    if (Vector3.Distance(transform.position, player.position) <= attackDistance)
-                    {
-                        HealthSystem playerHealth = player.GetComponent<HealthSystem>();
-                        if (playerHealth != null && !playerHealth.IsBlocking)
-                        {
-                            playerHealth.TakeDamage(10f);
-                            Debug.Log("👊 Enemy punches the player!");
-                        }
-                        else
-                        {
-                            Debug.Log("🛡️ Player blocked the punch!");
-                        }
-                    }
-                    break;
+    /// <summary>
+    /// Attempts to apply damage to the player if within range and unblocked.
+    /// </summary>
+    private void TryAttackPlayer()
+    {
+        if (Vector3.Distance(transform.position, player.position) > attackDistance) return;
 
-                case "Block":
-                    Debug.Log("🛡️ Enemy blocks!");
-                    healthSystem.IsBlocking = true;
-                    Invoke("StopBlocking", 1f);
-                    break;
+        HealthSystem playerHealth = player.GetComponent<HealthSystem>();
+        if (playerHealth == null) return;
 
-                case "Dodge":
-                    Debug.Log("🌀 Enemy dodges!");
-                    // Optional: Implement dodge movement
-                    break;
-
-                default:
-                    Debug.Log("😐 Enemy does nothing.");
-                    break;
-            }
-
-            // Behavior-adaptive learning
-            if (behaviorTracker != null)
-            {
-                string behavior = behaviorTracker.GetBehaviorType();
-                if (!string.IsNullOrEmpty(behavior))
-                {
-                    enemyAI.EvolveGene(behavior);
-                    behaviorTracker.ResetBehavior();
-                }
-            }
+        if (!playerHealth.IsBlocking)
+        {
+            playerHealth.TakeDamage(10f);
+            Debug.Log("👊 Enemy punches the player!");
+        }
+        else
+        {
+            Debug.Log("🛡️ Player blocked the punch!");
         }
     }
 
+    /// <summary>
+    /// Starts a temporary block state for the enemy.
+    /// </summary>
+    private void StartBlock()
+    {
+        healthSystem.IsBlocking = true;
+        Debug.Log("🛡️ Enemy blocks!");
+        Invoke(nameof(StopBlocking), 1f); // End block after 1 second
+    }
+
+    /// <summary>
+    /// Ends the enemy's blocking state.
+    /// </summary>
+    private void StopBlocking()
+    {
+        healthSystem.IsBlocking = false;
+    }
+
+    /// <summary>
+    /// Moves the enemy to a safe location to heal.
+    /// </summary>
     private void Retreat()
     {
         if (!isRetreating)
         {
+            // Pick a point away from the player
             Vector3 directionAway = (transform.position - player.position).normalized;
             retreatTarget = transform.position + directionAway * 10f;
 
@@ -175,17 +217,13 @@ public class EnemyFSM : MonoBehaviour
             {
                 agent.SetDestination(hit.position);
                 isRetreating = true;
-
-                VoiceManager vm = GetComponent<VoiceManager>();
-                if (vm != null) vm.PlayRetreatVoice();
+                voiceManager?.PlayRetreatVoice();
             }
         }
         else
         {
-            float distance = Vector3.Distance(transform.position, retreatTarget);
-
-            // Reached retreat point
-            if (distance < 1.5f && !isHealing)
+            // Once at target location, begin healing
+            if (Vector3.Distance(transform.position, retreatTarget) < 1.5f && !isHealing)
             {
                 isHealing = true;
                 StartCoroutine(HealOverTime());
@@ -193,43 +231,65 @@ public class EnemyFSM : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Heals the enemy over time while stationary.
+    /// </summary>
+    private IEnumerator HealOverTime()
+    {
+        Debug.Log("💊 Enemy starts healing...");
+
+        while (healthSystem.currentHealth < healthSystem.maxHealth * 0.6f)
+        {
+            healthSystem.Heal(healingRate * Time.deltaTime);
+            yield return null;
+        }
+
+        Debug.Log("✅ Enemy healed. Returning to patrol.");
+        isHealing = false;
+        isRetreating = false;
+        stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
+    }
+
+    /// <summary>
+    /// Triggers search mode when the player is lost.
+    /// </summary>
     private void StartSearch()
     {
         stateManager.SetState(EnemyStateManager.EnemyState.Search);
-        Search();
+        isSearching = true;
+        searchTimer = searchDuration;
+        Debug.Log("🟠 Enemy is searching for the player...");
     }
 
-    private void Search()
+    /// <summary>
+    /// Ends the search mode.
+    /// </summary>
+    private void EndSearch()
     {
-        if (!isSearching)
+        isSearching = false;
+    }
+
+    /// <summary>
+    /// Informs the adaptive AI about the player’s latest tactic.
+    /// </summary>
+    private void TrackAndEvolveBehavior()
+    {
+        if (behaviorTracker == null) return;
+
+        string behavior = behaviorTracker.GetBehaviorType();
+        if (!string.IsNullOrEmpty(behavior))
         {
-            isSearching = true;
-            searchTimer = searchDuration;
-            Debug.Log("🟠 Enemy is searching for the player...");
+            enemyAI.EvolveGene(behavior);
+            behaviorTracker.ResetBehavior();
         }
     }
 
-    private void StopBlocking()
+    /// <summary>
+    /// Returns true if enemy is currently in combat-related states.
+    /// </summary>
+    private bool IsInCombatState()
     {
-        healthSystem.IsBlocking = false;
+        var state = stateManager.currentState;
+        return state == EnemyStateManager.EnemyState.Chase || state == EnemyStateManager.EnemyState.Attack;
     }
-    
-
-    private IEnumerator HealOverTime()
-{
-    Debug.Log("💊 Enemy starts healing...");
-
-    while (healthSystem.currentHealth < healthSystem.maxHealth * 0.6f)
-    {
-        healthSystem.Heal(healingRate * Time.deltaTime);
-        yield return null;
-    }
-
-    Debug.Log("✅ Enemy healed, back to patrol!");
-    isHealing = false;
-    isRetreating = false;
-
-    stateManager.SetState(EnemyStateManager.EnemyState.Patrol);
-}
-
 }
