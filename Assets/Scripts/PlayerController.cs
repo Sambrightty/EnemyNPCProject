@@ -81,31 +81,32 @@ public class PlayerController : MonoBehaviour
     Vector3 origin = punchOrigin.position;
     Vector3 direction = transform.forward;
 
-    Debug.DrawRay(origin, direction * punchRange, Color.red, 1f); // visualize
+    Debug.DrawRay(origin, direction * punchRange, Color.red, 1f);
 
     if (Physics.Raycast(origin, direction, out hit, punchRange, enemyLayer))
     {
         Debug.Log("👊 Punch hit: " + hit.collider.name);
 
-        // ✅ FIX: Get HealthSystem from parent if hit object is child (like 'Hitbox')
+        // HealthSystem enemyHealth = hit.collider.GetComponent<HealthSystem>();
         HealthSystem enemyHealth = hit.collider.GetComponentInParent<HealthSystem>();
+
         if (enemyHealth != null)
-        {
-            if (!enemyHealth.IsBlocking)
             {
-                enemyHealth.TakeDamage(punchDamage);
-                punchCount++;
-                Debug.Log("✅ Enemy hit! Health reduced.");
+                if (!enemyHealth.IsBlocking)
+                {
+                    enemyHealth.TakeDamage(punchDamage);
+                    punchCount++;
+                    Debug.Log("✅ Enemy hit! Health reduced.");
+                }
+                else
+                {
+                    Debug.Log("🛡️ Enemy blocked the punch!");
+                }
             }
             else
             {
-                Debug.Log("🛡️ Enemy blocked the punch!");
+                Debug.LogWarning("Hit object has no HealthSystem: " + hit.collider.name);
             }
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ Hit object has no HealthSystem: " + hit.collider.name);
-        }
     }
     else
     {
