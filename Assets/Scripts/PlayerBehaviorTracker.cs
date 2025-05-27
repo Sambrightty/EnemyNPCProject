@@ -73,3 +73,4 @@ public class PlayerBehaviorTracker : MonoBehaviour
             behaviorText.text = "Behavior: " + GetBehaviorType();
     }
 }
+ 

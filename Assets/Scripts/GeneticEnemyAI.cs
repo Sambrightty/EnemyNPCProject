@@ -16,6 +16,9 @@ public class GeneticEnemyAI : MonoBehaviour
     [Range(0f, 0.5f)] public float mutationRate = 0.1f;  // Probability of mutation per trait
 
     private const string saveKeyPrefix = "EnemyGene_";   // Key prefix for saving genes
+    
+    private EnemyGrudgeMemory grudgeMemory;
+
 
     [Header("UI References (Optional)")]
     public TextMeshProUGUI aggressionText;
@@ -27,6 +30,7 @@ public class GeneticEnemyAI : MonoBehaviour
     /// </summary>
     private void Start()
     {
+        grudgeMemory = GetComponent<EnemyGrudgeMemory>();
         LoadGenes();
     }
 
@@ -35,26 +39,43 @@ public class GeneticEnemyAI : MonoBehaviour
     /// </summary>
     public void MutateGenes()
     {
-        aggression = MutateValue(aggression);
-        defense = MutateValue(defense);
-        dodge = MutateValue(dodge);
+        // Get grudge level (default to 0 if not found)
+        int grudgeLevel = grudgeMemory != null ? grudgeMemory.GetGrudgeLevel() : 0;
+
+        // Scale mutations: 10% increase per grudge level
+        float grudgeMultiplier = 1f + (grudgeLevel * 0.1f);
+
+        // Mutate each gene using grudge multiplier
+        aggression = MutateValue(aggression, grudgeMultiplier);
+        defense = MutateValue(defense, grudgeMultiplier);
+        dodge = MutateValue(dodge, grudgeMultiplier);
 
         SaveGenes();
-        Debug.Log($"Genes mutated: Aggression={aggression:F2}, Defense={defense:F2}, Dodge={dodge:F2}");
+
+        Debug.Log($"[GeneticEnemyAI] Genes mutated (Grudge {grudgeLevel}): Aggression={aggression:F2}, Defense={defense:F2}, Dodge={dodge:F2}");
     }
+
 
     /// <summary>
     /// Applies random mutation to a given gene value.
     /// </summary>
-    private float MutateValue(float value)
+   // Default version (optional)
+private float MutateValue(float value)
+{
+    return MutateValue(value, 1f);
+}
+
+// Grudge-aware version
+private float MutateValue(float value, float multiplier)
+{
+    if (Random.value < mutationRate)
     {
-        if (Random.value < mutationRate)
-        {
-            float mutationAmount = Random.Range(-0.1f, 0.1f);
-            value = Mathf.Clamp01(value + mutationAmount);
-        }
-        return value;
+        float mutationAmount = Random.Range(-0.1f, 0.1f) * multiplier;
+        value = Mathf.Clamp01(value + mutationAmount);
     }
+    return value;
+}
+
 
     /// <summary>
     /// Saves current genes to PlayerPrefs for persistence.
@@ -130,3 +151,4 @@ public class GeneticEnemyAI : MonoBehaviour
             dodgeText.text = $"Dodge: {dodge:F2}";
     }
 }
+ 
